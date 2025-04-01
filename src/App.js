@@ -1,3 +1,4 @@
+import RelatorioPDF from "./RelatorioPDF";
 import React, { useEffect, useState } from "react";
 import { signOut, createUserWithEmailAndPassword } from "firebase/auth";
 import { auth, db } from "./firebaseConfig";
@@ -134,15 +135,7 @@ function App() {
   };
 
   const exportarEstoquePDF = () => {
-    const docPDF = new jsPDF();
-    docPDF.setFontSize(16);
-    docPDF.text("Relatório de Estoque Atual", 20, 20);
-    autoTable(docPDF, {
-      startY: 30,
-      head: [["Nome", "Material", "Quantidade"]],
-      body: pecas.map((p) => [p.nome, p.material, p.quantidade]),
-    });
-    docPDF.save("estoque_atual.pdf");
+    RelatorioPDF(pecas);
   };
 
   const registrarVendedora = async () => {
