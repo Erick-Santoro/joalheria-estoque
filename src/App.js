@@ -214,24 +214,35 @@ function App() {
       )}
 
       <h3>Peças cadastradas:</h3>
-      <ul>
+      <ul style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
         {pecas.map((peca) => (
-          <li key={peca.id}>
-            {peca.nome} - {peca.material} - {peca.quantidade}
-            {usuario.cargo === "dona" && <button onClick={() => editarPeca(peca)}>Editar</button>}
-            <button onClick={() => registrarDevolucao(peca)}>Devolver</button>
-            <button onClick={() => registrarVenda(peca)}>Vender</button>
-            <button onClick={() => registrarSaida(peca)}>Retirar</button>
-            {usuario.cargo === "dona" && (
-              <button onClick={() => excluirPeca(peca.id)} style={{ color: "red" }}>
-                Excluir
-              </button>
+          <li key={peca.id} style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
+            {peca.imagemURL && (
+              <img
+                src={peca.imagemURL}
+                alt={peca.nome}
+                width={80}
+                height={80}
+                style={{ objectFit: "cover", borderRadius: 8 }}
+              />
             )}
+            <div>
+              <strong>{peca.nome}</strong><br />
+              {peca.material}<br />
+              Quantidade: {peca.quantidade}<br />
+              {usuario.cargo === "dona" && <button onClick={() => editarPeca(peca)}>Editar</button>}
+              <button onClick={() => registrarDevolucao(peca)}>Devolver</button>
+              <button onClick={() => registrarVenda(peca)}>Vender</button>
+              <button onClick={() => registrarSaida(peca)}>Retirar</button>
+              {usuario.cargo === "dona" && (
+                <button onClick={() => excluirPeca(peca.id)} style={{ color: "red" }}>Excluir</button>
+              )}
+            </div>
           </li>
         ))}
       </ul>
 
-      <h3><span role="img" aria-label="histórico">📋</span> Histórico de Movimentações</h3>
+      <h3>📋 Histórico de Movimentações</h3>
       <label>Filtrar por tipo:</label>
       <select value={filtro} onChange={(e) => setFiltro(e.target.value)}>
         <option value="todas">Todas</option>
@@ -265,3 +276,4 @@ function App() {
 }
 
 export default App;
+
