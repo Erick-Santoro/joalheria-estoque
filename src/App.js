@@ -1,4 +1,3 @@
-import RelatorioPDF from "./RelatorioPDF";
 import React, { useEffect, useState } from "react";
 import { signOut, createUserWithEmailAndPassword } from "firebase/auth";
 import { auth, db } from "./firebaseConfig";
@@ -38,7 +37,7 @@ function App() {
     const lista = await Promise.all(
       snapshot.docs.map(async (registro) => {
         const data = registro.data();
-        const pecaRef = registro.data().pecaId || "";
+        const pecaRef = data.pecaId || "";
         const pecaDocRef = pecaRef ? await getDoc(doc(db, "pecas", pecaRef)) : null;
         const nomePeca = pecaDocRef?.exists() ? pecaDocRef.data().nome : "(Peça removida)";
         return { id: registro.id, ...data, nomePeca };
@@ -135,7 +134,41 @@ function App() {
   };
 
   const exportarEstoquePDF = () => {
-    RelatorioPDF(pecas);
+    const docPDF = new jsPDF();
+    docPDF.setFontSize(16);
+    docPDF.text("Relatório de Estoque Atual", 20, 20);
+    autoTable(docPDF, {
+      startY: 30,
+      head: [["Nome", "Material", "Quantidade"]],
+      body: pecas.map((p) => [p.nome, p.material, p.quantidade]),
+    });
+    docPDF.save("estoque_atual.pdf");
+  };
+
+  const exportarMovimentacoesCSV = (movs) => {
+    const linhas = ["Ação,Peça,Detalhes,Usuário,Data"];
+    movs.forEach((mov) => {
+      const data = mov.data?.toDate().toLocaleString() || "—";
+      linhas.push(`${mov.acao},${mov.nomePeca},${mov.detalhes},${mov.usuario},${data}`);
+    });
+    const blob = new Blob([linhas.join("\n")], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "movimentacoes.csv";
+    link.click();
+  };
+
+  const exportarMovimentacoesPDF = (movs) => {
+    const docPDF = new jsPDF();
+    docPDF.setFontSize(16);
+    docPDF.text("Relatório de Movimentações", 20, 20);
+    autoTable(docPDF, {
+      startY: 30,
+      head: [["Ação", "Peça", "Detalhes", "Usuário", "Data"]],
+      body: movs.map((m) => [m.acao, m.nomePeca, m.detalhes, m.usuario, m.data?.toDate().toLocaleString() || "—"]),
+    });
+    docPDF.save("movimentacoes.pdf");
   };
 
   const registrarVendedora = async () => {
@@ -185,9 +218,7 @@ function App() {
         {pecas.map((peca) => (
           <li key={peca.id}>
             {peca.nome} - {peca.material} - {peca.quantidade}
-            {usuario.cargo === "dona" && (
-              <button onClick={() => editarPeca(peca)}>Editar</button>
-            )}
+            {usuario.cargo === "dona" && <button onClick={() => editarPeca(peca)}>Editar</button>}
             <button onClick={() => registrarDevolucao(peca)}>Devolver</button>
             <button onClick={() => registrarVenda(peca)}>Vender</button>
             <button onClick={() => registrarSaida(peca)}>Retirar</button>
@@ -200,27 +231,35 @@ function App() {
         ))}
       </ul>
 
-      <>
-        <h3><span role="img" aria-label="histórico">📋</span> Histórico de Movimentações</h3>
-        <label>Filtrar por tipo:</label>
-        <select value={filtro} onChange={(e) => setFiltro(e.target.value)}>
-          <option value="todas">Todas</option>
-          <option value="edição">Edição</option>
-          <option value="retirada">Retirada</option>
-          <option value="devolução">Devolução</option>
-          <option value="venda">Venda</option>
-          <option value="exclusão">Exclusão</option>
-        </select>
-        <ul>
-          {movimentacoes
-            .filter((mov) => filtro === "todas" || mov.acao === filtro)
-            .map((mov) => (
-              <li key={mov.id}>
-                <strong>{mov.acao.toUpperCase()}</strong> | {mov.nomePeca} | {mov.detalhes} | por {mov.usuario} | {mov.data?.toDate().toLocaleString()}
-              </li>
-            ))}
-        </ul>
-      </>
+      <h3><span role="img" aria-label="histórico">📋</span> Histórico de Movimentações</h3>
+      <label>Filtrar por tipo:</label>
+      <select value={filtro} onChange={(e) => setFiltro(e.target.value)}>
+        <option value="todas">Todas</option>
+        <option value="edição">Edição</option>
+        <option value="retirada">Retirada</option>
+        <option value="devolução">Devolução</option>
+        <option value="venda">Venda</option>
+        <option value="exclusão">Exclusão</option>
+      </select>
+
+      {usuario.cargo === "dona" && (
+        <div style={{ margin: "1rem 0" }}>
+          <button onClick={() => exportarMovimentacoesCSV(movimentacoes)}>Exportar Movimentações CSV</button>
+          <button onClick={() => exportarMovimentacoesPDF(movimentacoes)} style={{ marginLeft: 10 }}>
+            Exportar Movimentações PDF
+          </button>
+        </div>
+      )}
+
+      <ul>
+        {movimentacoes
+          .filter((mov) => filtro === "todas" || mov.acao === filtro)
+          .map((mov) => (
+            <li key={mov.id}>
+              <strong>{mov.acao.toUpperCase()}</strong> | {mov.nomePeca} | {mov.detalhes} | por {mov.usuario} | {mov.data?.toDate().toLocaleString()}
+            </li>
+          ))}
+      </ul>
     </div>
   );
 }
