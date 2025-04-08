@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { signOut, createUserWithEmailAndPassword } from "firebase/auth";
-import { auth, db } from "./firebaseConfig";
+import { auth, db, storage } from "./firebaseConfig";
 import {
   collection,
   getDocs,
@@ -14,6 +14,7 @@ import {
   getDoc,
   setDoc,
 } from "firebase/firestore";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import Login from "./Login";
 import AdicionarPeca from "./AdicionarPeca";
 import jsPDF from "jspdf";
@@ -68,6 +69,15 @@ function App() {
       quantidade: Number(novaQtd),
     });
     await registrarMovimentacao("edição", peca.id, `Alterado para: ${novoNome}, ${novoMaterial}, ${novaQtd}`);
+    carregarPecas();
+  };
+
+  const atualizarImagem = async (peca, file) => {
+    const storageRef = ref(storage, `imagens/${peca.id}/${file.name}`);
+    await uploadBytes(storageRef, file);
+    const url = await getDownloadURL(storageRef);
+    await updateDoc(doc(db, "pecas", peca.id), { imagemURL: url });
+    await registrarMovimentacao("imagem atualizada", peca.id, "Imagem alterada");
     carregarPecas();
   };
 
@@ -218,19 +228,21 @@ function App() {
         {pecas.map((peca) => (
           <li key={peca.id} style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
             {peca.imagemURL && (
-              <img
-                src={peca.imagemURL}
-                alt={peca.nome}
-                width={80}
-                height={80}
-                style={{ objectFit: "cover", borderRadius: 8 }}
-              />
+              <img src={peca.imagemURL} alt={peca.nome} width={80} height={80} style={{ objectFit: "cover", borderRadius: 8 }} />
             )}
             <div>
               <strong>{peca.nome}</strong><br />
               {peca.material}<br />
               Quantidade: {peca.quantidade}<br />
               {usuario.cargo === "dona" && <button onClick={() => editarPeca(peca)}>Editar</button>}
+              {usuario.cargo === "dona" && (
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => atualizarImagem(peca, e.target.files[0])}
+                  style={{ marginTop: "8px" }}
+                />
+              )}
               <button onClick={() => registrarDevolucao(peca)}>Devolver</button>
               <button onClick={() => registrarVenda(peca)}>Vender</button>
               <button onClick={() => registrarSaida(peca)}>Retirar</button>
@@ -251,6 +263,7 @@ function App() {
         <option value="devolução">Devolução</option>
         <option value="venda">Venda</option>
         <option value="exclusão">Exclusão</option>
+        <option value="imagem atualizada">Imagem Atualizada</option>
       </select>
 
       {usuario.cargo === "dona" && (
@@ -276,4 +289,5 @@ function App() {
 }
 
 export default App;
+
 
